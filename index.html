@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-br" manifest="manifest.json">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d1117">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Curionauta PRO</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <style>
+        :root { --primary: #58a6ff; --bg: #0d1117; --card: #161b22; --text: #c9d1d9; --success: #238636; --purple: #8b5cf6; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; margin: 0; }
+        .container { max-width: 800px; margin: auto; background: var(--card); padding: 25px; border-radius: 12px; }
+        h1 { color: var(--primary); text-align: center; margin-bottom: 5px; text-transform: uppercase; }
+        p.subtitle { text-align: center; font-size: 0.9em; margin-bottom: 25px; color: #8b949e; }
+        label { display: block; margin: 15px 0 8px; font-weight: bold; font-size: 14px; color: var(--primary); }
+        input { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: white; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; margin-top: 10px; text-transform: uppercase; }
+        #btnGerar { background-color: var(--success); color: white; }
+        #btnGerarCapa { background-color: var(--purple); color: white; display: none; }
+        #btnInstalar { background-color: var(--primary); color: white; display: none; margin-bottom: 15px; }
+        button:disabled { background-color: #213525; color: #8b949e; }
+        .output-box { margin-top: 20px; padding: 15px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; position: relative; }
+        .label-box { color: #f0883e; font-size: 11px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
+        pre { white-space: pre-wrap; word-wrap: break-word; color: #d1d5db; font-size: 14px; margin: 0; }
+        .tiktok-meta { margin-top: 25px; padding: 15px; border-left: 4px solid var(--primary); background: #1c2128; font-size: 14px; }
+        .status { text-align: center; font-size: 13px; margin-top: 15px; color: #f0883e; font-weight: bold; }
+        #loading { display: none; text-align: center; margin: 10px 0; }
+        .cover-preview { margin-top: 20px; text-align: center; }
+        .cover-preview img { max-width: 200px; border-radius: 8px; border: 2px solid var(--primary); }
+        .copy-btn { position: absolute; top: 10px; right: 10px; background: #3a3a3a; color: white; padding: 5px 10px; border-radius: 5px; font-size: 11px; cursor: pointer; }
+        .copy-btn:hover { background: #4a4a4a; }
+        .install-banner { display: none; background: #161b22; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+        .install-banner button { width: auto; padding: 8px 15px; margin-left: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 Curionauta PRO</h1>
+    <p class="subtitle">Gerador de Roteiros e Prompts Grok</p>
+
+    <div class="install-banner" id="installBanner">
+        <span>Instale o <strong>Curionauta PRO</strong> na sua tela inicial para acesso rápido!</span>
+        <button id="btnInstalar">INSTALAR</button>
+        <button onclick="document.getElementById('installBanner').style.display='none'" style="background: transparent; color: #8b949e; width: auto; padding: 8px;">Fechar</button>
+    </div>
+
+    <label>TEMA DO VÍDEO:</label>
+    <input type="text" id="tema" placeholder="Ex: O mistério de Marte">
+
+    <button id="btnGerar" onclick="gerarConteudo()">GERAR SEQUÊNCIA COMPLETA</button>
+    <button id="btnGerarCapa" onclick="gerarPromptCapa()" style="display: none;">GERAR PROMPT PARA CAPA DO TIKTOK</button>
+    <div id="loading">
+        <img src="https://i.gifer.com/origin/34/34338d26023e5575fa6c6183226ad960.gif" alt="Carregando..." width="30">
+    </div>
+    <div id="status" class="status"></div>
+
+    <div id="resultado"></div>
+    <div id="promptCapa" class="output-box" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="label-box">PROMPT PARA CAPA (Grok Image)</div>
+            <button class="copy-btn" onclick="copiarPromptCapa()">COPIAR</button>
+        </div>
+        <pre id="textoPromptCapa"></pre>
+        <div class="cover-preview">
+            <p style="font-size: 12px; color: #8b949e;">Exemplo de capa gerada com IA:</p>
+            <img src="https://mistralaiblackforestprod.blob.core.windows.net/images/blackforest/5566/e316/-f29/3-4ff3-8474-a0780662c662/image.jpg?se=2026-04-01T06%3A03%3A38Z&sp=r&sv=2026-02-06&sr=b&skoid=0c825961-8b13-4c3f-94c2-848b13b71a98&sktid=4fbc1168-2984-4d17-af19-ac5138c2378e&skt=2026-04-01T05%3A03%3A38Z&ske=2026-04-01T06%3A03%3A38Z&sks=b&skv=2026-02-06&sig=Umjn7UNAoWd63VJZM%2BBPwsC3VYSCMwCdbt05t7hK6aQ%3D" alt="Exemplo de capa para TikTok" />
+        </div>
+    </div>
+</div>
+
+<!-- Manifest e Service Worker para PWA -->
+<link rel="manifest" href="manifest.json">
+<script>
+    // Registra o Service Worker para PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(registration => {
+                console.log('ServiceWorker registrado com sucesso:', registration.scope);
+            }).catch(err => {
+                console.log('Falha no registro do ServiceWorker:', err);
+            });
+        });
+    }
+
+    // Variável para guardar o evento de instalação
+    let deferredPrompt;
+
+    // Escuta o evento "beforeinstallprompt"
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installBanner').style.display = 'flex';
+        document.getElementById('btnInstalar').style.display = 'inline-block';
+    });
+
+    // Função para instalar o PWA
+    document.getElementById('btnInstalar').addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            console.log('Usuário aceitou a instalação');
+        } else {
+            console.log('Usuário rejeitou a instalação');
+        }
+        deferredPrompt = null;
+        document.getElementById('installBanner').style.display = 'none';
+    });
+</script>
+
+<script>
+    const API_KEY = "AIzaSyDjlW3kCRf6IUstjPKA3B9arx_TSwtjs0U";
+    let roteiroGerado = null;
+
+    document.getElementById('tema').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') gerarConteudo();
+    });
+
+    async function gerarConteudo() {
+        const tema = document.getElementById('tema').value;
+        const btnGerar = document.getElementById('btnGerar');
+        const btnGerarCapa = document.getElementById('btnGerarCapa');
+        const status = document.getElementById('status');
+        const resDiv = document.getElementById('resultado');
+        const loading = document.getElementById('loading');
+
+        if (!tema) {
+            alert("Digite um tema primeiro!");
+            return;
+        }
+
+        try {
+            btnGerar.disabled = true;
+            btnGerarCapa.style.display = 'none';
+            loading.style.display = 'block';
+            status.innerText = "🛰️ Buscando modelo compatível do Google...";
+            resDiv.innerHTML = "";
+
+            const urlModelos = `https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`;
+            const resModelos = await fetch(urlModelos);
+            if (!resModelos.ok) {
+                const erro = await resModelos.json();
+                throw new Error(`Falha ao acessar a lista de modelos: ${erro.error?.message || "Erro desconhecido"}`);
+            }
+
+            const dadosModelos = await resModelos.json();
+            let modeloCorreto = "";
+
+            for (let m of dadosModelos.models) {
+                if (m.supportedGenerationMethods?.includes("generateContent")) {
+                    if (m.name.includes("flash") || m.name.includes("pro") || m.name.includes("gemini")) {
+                        modeloCorreto = m.name;
+                        break;
+                    }
+                }
+            }
+
+            if (!modeloCorreto) {
+                throw new Error("Nenhum modelo compatível encontrado.");
+            }
+
+            status.innerText = `🛰️ Conectado ao modelo (${modeloCorreto.split('/')[1]}). Gerando roteiro...`;
+
+            const promptSistema = `
+                Você é um especialista em roteiros para o canal "Curionauta". TEMA: ${tema}.
+                Retorne APENAS um JSON puro (sem markdown) neste formato exato:
+                {
+                  "v1": "Prompt de Vídeo (English): [Cinematic 4k...] Generate only one single video output, no variations.\\n\\nNarração (Português): [Gancho]",
+                  "v2": "Prompt de Vídeo (English): [Continuity...] Generate only one single video output, no variations.\\n\\nNarração (Português): [Explicação]",
+                  "v3": "Prompt de Vídeo (English): [Epic conclusion...] Generate only one single video output, no variations.\\n\\nNarração (Português): [CTA @curionauta14]",
+                  "tiktok": "Descrição do vídeo + 4 hashtags"
+                }
+            `;
+
+            const urlGerar = `https://generativelanguage.googleapis.com/v1beta/${modeloCorreto}:generateContent?key=${API_KEY}`;
+
+            const respostaAPI = await fetch(urlGerar, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptSistema }] }]
+                })
+            });
+
+            if (!respostaAPI.ok) {
+                const erroDetalhado = await respostaAPI.json();
+                throw new Error(`Erro na geração: ${erroDetalhado.error?.message || "Erro desconhecido"}`);
+            }
+
+            const dadosAPI = await respostaAPI.json();
+            if (!dadosAPI.candidates || !dadosAPI.candidates[0]) {
+                throw new Error("Resposta da API não contém dados válidos.");
+            }
+
+            const textoBruto = dadosAPI.candidates[0].content.parts[0].text;
+            let resultado;
+            try {
+                const textoLimpo = textoBruto.replace(/http:\/\/googleusercontent\.com\/[^\s]+/g, '').trim();
+                resultado = JSON.parse(textoLimpo);
+            } catch (e) {
+                throw new Error(`Falha ao processar JSON: ${e.message}. Texto bruto: ${textoBruto}`);
+            }
+
+            roteiroGerado = resultado;
+
+            resDiv.innerHTML = `
+                <div class="output-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="label-box">VÍDEO 1 (Gancho)</div>
+                        <button class="copy-btn" onclick="copiarPrompt('v1')">COPIAR</button>
+                    </div>
+                    <pre id="promptV1">${resultado.v1}</pre>
+                </div>
+                <div class="output-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="label-box">VÍDEO 2 (Explicação)</div>
+                        <button class="copy-btn" onclick="copiarPrompt('v2')">COPIAR</button>
+                    </div>
+                    <pre id="promptV2">${resultado.v2}</pre>
+                </div>
+                <div class="output-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="label-box">VÍDEO 3 (CTA)</div>
+                        <button class="copy-btn" onclick="copiarPrompt('v3')">COPIAR</button>
+                    </div>
+                    <pre id="promptV3">${resultado.v3}</pre>
+                </div>
+                <div class="tiktok-meta">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="label-box">TIKTOK META</div>
+                        <button class="copy-btn" onclick="copiarPrompt('tiktok')">COPIAR</button>
+                    </div>
+                    <pre id="promptTiktok">${resultado.tiktok}</pre>
+                </div>
+            `;
+            status.innerText = "✅ Roteiro gerado com sucesso!";
+            btnGerarCapa.style.display = 'block';
+        } catch (e) {
+            status.innerText = `❌ Erro: ${e.message}`;
+            console.error(e);
+        } finally {
+            btnGerar.disabled = false;
+            loading.style.display = 'none';
+        }
+    }
+
+    function gerarPromptCapa() {
+        if (!roteiroGerado) {
+            alert("Gere o roteiro primeiro!");
+            return;
+        }
+
+        const tema = document.getElementById('tema').value;
+        const promptCapa = `
+            A futuristic, sleek, and eye-catching TikTok video cover for a video titled "${tema}". The design should include cosmic elements like ${tema.includes("Marte") ? "Mars, stars, and a spaceship" : "related visuals"}, with a bold title in the center. The style should be vibrant, modern, and engaging, suitable for a science and curiosity-themed TikTok channel. Use a 9:16 aspect ratio, high resolution, and bright colors to attract attention.
+        `;
+
+        document.getElementById('textoPromptCapa').textContent = promptCapa;
+        document.getElementById('promptCapa').style.display = 'block';
+    }
+
+    function copiarPrompt(tipo) {
+        let texto;
+        if (tipo === 'v1') texto = document.getElementById('promptV1').innerText;
+        else if (tipo === 'v2') texto = document.getElementById('promptV2').innerText;
+        else if (tipo === 'v3') texto = document.getElementById('promptV3').innerText;
+        else if (tipo === 'tiktok') texto = document.getElementById('promptTiktok').innerText;
+
+        navigator.clipboard.writeText(texto)
+            .then(() => alert(`Prompt ${tipo.toUpperCase()} copiado para a área de transferência!`))
+            .catch(err => console.error("Falha ao copiar: ", err));
+    }
+
+    function copiarPromptCapa() {
+        const texto = document.getElementById('textoPromptCapa').innerText;
+        navigator.clipboard.writeText(texto)
+            .then(() => alert("Prompt da capa copiado para a área de transferência!"))
+            .catch(err => console.error("Falha ao copiar: ", err));
+    }
+</script>
+
+</body>
+</html>

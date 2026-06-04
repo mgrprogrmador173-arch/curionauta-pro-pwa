@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Scanner de Preços Inteligente</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @keyframes scan { 0%{top:0} 50%{top:100%} 100%{top:0} }
+    .scanner-line{animation:scan 3s linear infinite}
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-16">
+  <header class="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/90 px-4 py-3 backdrop-blur">
+    <div class="mx-auto flex max-w-md items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="rounded-lg bg-indigo-600 p-2"><i class="fa-solid fa-brain"></i></div>
+        <div><h1 class="font-bold">AI Price Scanner</h1><p id="status" class="text-xs text-slate-400">Modo local ativo</p></div>
+      </div>
+      <span id="cameraBadge" class="rounded-md bg-yellow-400/10 px-2 py-1 text-xs text-yellow-400">Verificando...</span>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-md space-y-5 p-4">
+    <section class="flex items-center justify-between rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-900 to-slate-900 p-4">
+      <div><p class="text-xs font-bold uppercase text-indigo-200">Soma acumulada</p><p id="total" class="text-2xl font-extrabold">R$ 0,00</p></div>
+      <div class="text-right"><p id="count" class="mb-2 text-xs text-indigo-300">0 itens</p><button id="clearSum" class="text-xs text-red-400"><i class="fa-solid fa-rotate-left"></i> Zerar soma</button></div>
+    </section>
+
+    <section class="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl">
+      <div class="relative aspect-[3/4] bg-black">
+        <video id="camera" autoplay playsinline muted class="absolute inset-0 h-full w-full object-cover"></video>
+        <img id="preview" class="hidden absolute inset-0 z-10 h-full w-full object-cover" alt="Prévia">
+        <div class="absolute inset-0 z-20 border-2 border-indigo-500/20 pointer-events-none">
+          <div class="scanner-line absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-indigo-400 to-transparent"></div>
+          <div class="absolute left-4 top-4 h-6 w-6 border-l-2 border-t-2 border-indigo-400"></div>
+          <div class="absolute right-4 top-4 h-6 w-6 border-r-2 border-t-2 border-indigo-400"></div>
+          <div class="absolute bottom-4 left-4 h-6 w-6 border-b-2 border-l-2 border-indigo-400"></div>
+          <div class="absolute bottom-4 right-4 h-6 w-6 border-b-2 border-r-2 border-indigo-400"></div>
+        </div>
+      </div>
+      <div class="flex gap-3 border-t border-slate-800 p-4">
+        <label class="cursor-pointer rounded-xl bg-slate-800 p-3"><i class="fa-solid fa-image"></i><input id="upload" type="file" accept="image/*" class="hidden"></label>
+        <button id="scan" class="flex-1 rounded-xl bg-indigo-600 px-4 py-3 font-semibold"><i class="fa-solid fa-camera"></i> Escanear produto</button>
+        <button id="reset" class="hidden rounded-xl bg-slate-800 p-3"><i class="fa-solid fa-arrow-rotate-left"></i></button>
+      </div>
+    </section>
+
+    <section>
+      <div class="mb-3 flex items-center justify-between"><h2 class="font-bold"><i class="fa-solid fa-boxes-stacked text-indigo-400"></i> Produtos (<span id="catalogCount">0</span>)</h2><button id="clearCatalog" class="text-xs text-red-400">Limpar tudo</button></div>
+      <div id="catalog" class="space-y-3"></div>
+    </section>
+  </main>
+
+  <script>
+    const camera = document.getElementById('camera');
+    const preview = document.getElementById('preview');
+    const catalogEl = document.getElementById('catalog');
+    let total = 0;
+    let count = 0;
+    let products = JSON.parse(localStorage.getItem('price_scanner_products') || '[]');
+
+    const money = value => value.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+    const save = () => localStorage.setItem('price_scanner_products', JSON.stringify(products));
+
+    function updateTotal(){
+      document.getElementById('total').textContent = money(total);
+      document.getElementById('count').textContent = `${count} itens`;
+    }
+
+    function render(){
+      document.getElementById('catalogCount').textContent = products.length;
+      if(!products.length){
+        catalogEl.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-800 p-8 text-center text-sm text-slate-500">Nenhum produto registrado.</div>';
+        return;
+      }
+      catalogEl.innerHTML = products.map((p,i)=>`<div class="flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900 p-4"><div><p class="font-semibold">${p.name}</p><p class="text-sm text-indigo-400">${money(p.price)}</p></div><div class="flex gap-2"><button onclick="add(${i})" class="rounded-lg bg-indigo-600 px-3 py-2"><i class="fa-solid fa-plus"></i></button><button onclick="removeProduct(${i})" class="rounded-lg bg-red-950 px-3 py-2 text-red-400"><i class="fa-solid fa-trash"></i></button></div></div>`).join('');
+    }
+
+    window.add = i => { total += Number(products[i].price); count++; updateTotal(); };
+    window.removeProduct = i => { products.splice(i,1); save(); render(); };
+
+    async function startCamera(){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+        camera.srcObject = stream;
+        document.getElementById('cameraBadge').textContent = 'Câmera ativa';
+        document.getElementById('cameraBadge').className = 'rounded-md bg-green-400/10 px-2 py-1 text-xs text-green-400';
+      }catch{
+        document.getElementById('cameraBadge').textContent = 'Sem câmera';
+        document.getElementById('status').textContent = 'Use o botão de imagem';
+      }
+    }
+
+    document.getElementById('scan').addEventListener('click',()=>{
+      const name = prompt('Nome do produto:');
+      if(!name) return;
+      const value = prompt('Preço do produto:');
+      const price = Number(String(value).replace(',','.'));
+      if(!Number.isFinite(price)) return alert('Preço inválido.');
+      products.push({name, price}); save(); render();
+    });
+
+    document.getElementById('upload').addEventListener('change',e=>{
+      const file = e.target.files?.[0]; if(!file) return;
+      preview.src = URL.createObjectURL(file); preview.classList.remove('hidden'); document.getElementById('reset').classList.remove('hidden');
+    });
+
+    document.getElementById('reset').addEventListener('click',()=>{preview.classList.add('hidden'); document.getElementById('reset').classList.add('hidden');});
+    document.getElementById('clearSum').addEventListener('click',()=>{total=0; count=0; updateTotal();});
+    document.getElementById('clearCatalog').addEventListener('click',()=>{if(confirm('Apagar todos os produtos?')){products=[]; save(); render();}});
+
+    updateTotal(); render(); startCamera();
+  </script>
+</body>
+</html>
